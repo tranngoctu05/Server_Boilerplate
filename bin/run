@@ -1,18 +1,41 @@
 #!/usr/bin/env node
 
 const http = require('http');
+const Sequelize = require('sequelize');
 
 const config = require('../config')[process.env.NODE_ENV || 'development'];
 
 const log = config.log();
-const app = require('../app')(config);
 
-const server = http.createServer(app);
+// Khởi tạo sequelize
+const sequelize = new Sequelize(config.postgres.options);
 
-server.listen(process.env.PORT || 3000);
+// Khởi tạo ứng dụng
+const app = require('../app')(config, sequelize);
 
-server.on('listening', () => {
-  log.info(
-    `Hi there! I'm listening on port ${server.address().port} in ${app.get('env')} mode.`,
-  );
+// Kết nối tới cơ sở dữ liệu
+function connectToPostgres() {
+  return sequelize
+    .authenticate()
+    .then(() => {
+      log.info('Connection has been established successfully.');
+      return sequelize; // Đảm bảo sequelize được trả về
+    })
+    .catch((error) => {
+      log.error('Unable to connect to the database:', error);
+      process.exit(1);
+    });
+}
+
+// Connect to PostgreSQL và bắt đầu server
+connectToPostgres().then((postgresClient) => {
+  config.postgres.client = postgresClient;
+
+  const server = http.createServer(app);
+
+  server.listen(process.env.PORT || 3000, () => {
+    log.info(
+      `Hi there! I'm listening on port ${server.address().port} in ${app.get('env')} mode.`,
+    );
+  });
 });

@@ -5,7 +5,6 @@ const todosRoute = require('./todos');
 const usersRoute = require('./users');
 
 module.exports = (params) => {
-
   router.get('/', (req, res) => {
     res.send('Home Page');
   });
