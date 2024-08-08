@@ -2,15 +2,23 @@ const express = require('express');
 
 const app = express();
 const routes = require('./routes');
+require('dotenv').config();
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./config/swagger');
 
 const TodoService = require('./services/TodoService');
 const UserService = require('./services/UserService');
+const AuthService = require('./services/AuthService');
 
-module.exports = (config) => {
+module.exports = (config, sequelize) => {
   const log = config.log();
 
-  const todoService = new TodoService();
-  const userService = new UserService();
+  app.use(express.urlencoded({ extended: true }));
+  app.use(express.json());
+
+  const todoService = new TodoService(sequelize);
+  const userService = new UserService(sequelize);
+  const authService = new AuthService(sequelize);
 
   // Add a request logging middleware in development mode
   if (app.get('env') === 'development') {
@@ -19,9 +27,10 @@ module.exports = (config) => {
       return next();
     });
   }
-  
-  app.use('/', routes({todoService, userService}));
-  
+
+  app.use('/api', routes({ todoService, userService ,authService}));
+  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
   // eslint-disable-next-line no-unused-vars
   app.use((error, req, res, next) => {
     res.status(error.status || 500);
