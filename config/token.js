@@ -1,8 +1,8 @@
 const config = Object.freeze({
-    SECRET:"SECRET_TranTu123",
-    SECRET_REFRESH: "SECRET_REFRESH_TranTu123",
-    tokenLife: '15m',
-    refreshTokenLife: '7d'
+    SECRET: process.env.SECRET,
+    SECRET_REFRESH: process.env.SECRET_REFRESH,
+    tokenLife: process.env.TOKENLIFE,
+    refreshTokenLife: process.env.SECRET_REFRESH
 })
 
 module.exports = config;
