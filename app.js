@@ -1,6 +1,7 @@
 const express = require('express');
 
 const app = express();
+const helmet = require('helmet');
 const routes = require('./routes');
 require('dotenv').config();
 const swaggerUi = require('swagger-ui-express');
@@ -30,7 +31,7 @@ module.exports = (config, sequelize) => {
 
   app.use('/api', routes({ todoService, userService ,authService}));
   app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-
+  app.use(helmet());
   // eslint-disable-next-line no-unused-vars
   app.use((error, req, res, next) => {
     res.status(error.status || 500);
