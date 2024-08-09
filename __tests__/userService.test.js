@@ -1,110 +1,192 @@
 const request = require('supertest');
-const app = require('../app'); // Thay thế bằng đường dẫn tới tệp app của bạn
-const { sequelize, User } = require('../models/sequelize'); // Thay thế nếu bạn cần import thêm mô hình
+const app = require('../app'); // Đường dẫn đến tệp app của bạn
+const { User } = require('../models/sequelize/index');
+const sequelize = require('../bin/run'); // Đảm bảo bạn đã khởi tạo sequelize
 
-beforeAll(async () => {
-    // Kết nối cơ sở dữ liệu trước khi chạy các test
-    await sequelize.authenticate();
+describe('User Routes', () => {
+  beforeAll(async () => {
     await sequelize.sync({ force: true });
-});
+  });
 
-afterAll(async () => {
-    // Đóng kết nối cơ sở dữ liệu sau khi chạy các test
-    await sequelize.close();
-});
+  afterEach(async () => {
+    await User.destroy({ where: {} });
+  });
 
-describe('User API Tests', () => {
-    let token; // Token cho việc test các API yêu cầu xác thực
+  test('POST /users should create a user', async () => {
+    const response = await request(app)
+      .post('/users')
+      .set('Authorization', 'Bearer YOUR_VALID_TOKEN') // Thay thế bằng token hợp lệ
+      .send({
+        username: 'testuser',
+        email: 'test@example.com',
+        password: 'password123',
+        bio: 'This is a bio'
+      })
+      .expect(201);
 
-    beforeAll(async () => {
-        // Đăng ký và lấy token để test các API cần xác thực
-        await request(app)
-            .post('/api/auth/register')
-            .send({
-                email: 'testuser@example.com',
-                password: 'password123',
-                username: 'testuser',
-                bio: 'Test bio'
-            });
+    expect(response.body).toHaveProperty('message', 'User created successfully');
+    expect(response.body.user).toHaveProperty('username', 'testuser');
+    expect(response.body.user).toHaveProperty('email', 'test@example.com');
+  });
 
-        const response = await request(app)
-            .post('/api/auth/login')
-            .send({
-                email: 'testuser@example.com',
-                password: 'password123'
-            });
+  test('POST /users should return error for duplicate email', async () => {
+    await request(app)
+      .post('/users')
+      .set('Authorization', 'Bearer YOUR_VALID_TOKEN') // Thay thế bằng token hợp lệ
+      .send({
+        username: 'testuser',
+        email: 'test@example.com',
+        password: 'password123',
+        bio: 'This is a bio'
+      });
 
-        token = response.body.token;
-    });
+    const response = await request(app)
+      .post('/users')
+      .set('Authorization', 'Bearer YOUR_VALID_TOKEN') // Thay thế bằng token hợp lệ
+      .send({
+        username: 'anotheruser',
+        email: 'test@example.com',
+        password: 'password456',
+        bio: 'This is another bio'
+      })
+      .expect(422);
 
-    test('Create user', async () => {
-        const response = await request(app)
-            .post('/api/users')
-            .set('Authorization', `Bearer ${token}`)
-            .send({
-                email: 'newuser@example.com',
-                password: 'password123',
-                username: 'newuser',
-                bio: 'New user bio'
-            });
+    expect(response.body.errors).toContain('Email already exists');
+  });
 
-        expect(response.statusCode).toBe(201);
-        expect(response.body).toHaveProperty('user');
-    });
+  test('GET /users should retrieve a list of users', async () => {
+    await request(app)
+      .post('/users')
+      .set('Authorization', 'Bearer YOUR_VALID_TOKEN') // Thay thế bằng token hợp lệ
+      .send({
+        username: 'testuser1',
+        email: 'test1@example.com',
+        password: 'password123',
+        bio: 'This is a bio'
+      });
 
-    test('Get list of users', async () => {
-        const response = await request(app)
-            .get('/api/users')
-            .set('Authorization', `Bearer ${token}`);
+    const response = await request(app)
+      .get('/users')
+      .set('Authorization', 'Bearer YOUR_VALID_TOKEN') // Thay thế bằng token hợp lệ
+      .expect(200);
 
-        expect(response.statusCode).toBe(200);
-        expect(response.body).toBeInstanceOf(Array);
-    });
+    expect(response.body).toHaveLength(1);
+    expect(response.body[0]).toHaveProperty('username', 'testuser1');
+  });
 
-    test('Get current user', async () => {
-        const user = await User.findOne({ where: { email: 'testuser@example.com' } });
+  test('GET /users/me should retrieve the current user', async () => {
+    const userResponse = await request(app)
+      .post('/users')
+      .set('Authorization', 'Bearer YOUR_VALID_TOKEN') // Thay thế bằng token hợp lệ
+      .send({
+        username: 'testuser',
+        email: 'test@example.com',
+        password: 'password123',
+        bio: 'This is a bio'
+      });
 
-        const response = await request(app)
-            .get(`/api/users/${user.id}`)
-            .set('Authorization', `Bearer ${token}`);
+    const token = userResponse.headers['authorization'].split(' ')[1];
 
-        expect(response.statusCode).toBe(200);
-        expect(response.body).toHaveProperty('email', 'testuser@example.com');
-    });
+    const response = await request(app)
+      .get('/users/me')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
 
-    test('Update user bio', async () => {
-        const user = await User.findOne({ where: { email: 'testuser@example.com' } });
+    expect(response.body).toHaveProperty('username', 'testuser');
+  });
 
-        const response = await request(app)
-            .patch(`/api/users/${user.id}`)
-            .set('Authorization', `Bearer ${token}`)
-            .send({ bio: 'Updated bio' });
+  test('GET /users/:id should retrieve a user by ID', async () => {
+    const userResponse = await request(app)
+      .post('/users')
+      .set('Authorization', 'Bearer YOUR_VALID_TOKEN') // Thay thế bằng token hợp lệ
+      .send({
+        username: 'testuser',
+        email: 'test@example.com',
+        password: 'password123',
+        bio: 'This is a bio'
+      });
 
-        expect(response.statusCode).toBe(200);
-        expect(response.body).toHaveProperty('user');
-        expect(response.body.user.bio).toBe('Updated bio');
-    });
+    const userId = userResponse.body.user.id;
 
-    test('Delete user', async () => {
-        const user = await User.findOne({ where: { email: 'testuser@example.com' } });
+    const response = await request(app)
+      .get(`/users/${userId}`)
+      .set('Authorization', 'Bearer YOUR_VALID_TOKEN') // Thay thế bằng token hợp lệ
+      .expect(200);
 
-        const response = await request(app)
-            .delete(`/api/users/${user.id}`)
-            .set('Authorization', `Bearer ${token}`);
+    expect(response.body).toHaveProperty('username', 'testuser');
+  });
 
-        expect(response.statusCode).toBe(200);
-        expect(response.body).toHaveProperty('message', 'User deleted successfully');
-    });
+  test('PATCH /users/user/:id should update user bio', async () => {
+    const userResponse = await request(app)
+      .post('/users')
+      .set('Authorization', 'Bearer YOUR_VALID_TOKEN') // Thay thế bằng token hợp lệ
+      .send({
+        username: 'testuser',
+        email: 'test@example.com',
+        password: 'password123',
+        bio: 'This is a bio'
+      });
 
-    test('Change password', async () => {
-        const user = await User.findOne({ where: { email: 'testuser@example.com' } });
+    const userId = userResponse.body.user.id;
 
-        const response = await request(app)
-            .post(`/api/users/${user.id}/change-password`)
-            .set('Authorization', `Bearer ${token}`)
-            .send({ oldPassword: 'password123', newPassword: 'newpassword123' });
+    const response = await request(app)
+      .patch(`/users/user/${userId}`)
+      .set('Authorization', 'Bearer YOUR_VALID_TOKEN') // Thay thế bằng token hợp lệ
+      .send({ bio: 'Updated bio' })
+      .expect(200);
 
-        expect(response.statusCode).toBe(200);
-        expect(response.body).toHaveProperty('message', 'Password changed successfully');
-    });
+    expect(response.body).toHaveProperty('message', 'Bio updated successfully');
+    expect(response.body.user).toHaveProperty('bio', 'Updated bio');
+  });
+
+  test('DELETE /users/user/:id should delete a user', async () => {
+    const userResponse = await request(app)
+      .post('/users')
+      .set('Authorization', 'Bearer YOUR_VALID_TOKEN') // Thay thế bằng token hợp lệ
+      .send({
+        username: 'testuser',
+        email: 'test@example.com',
+        password: 'password123',
+        bio: 'This is a bio'
+      });
+
+    const userId = userResponse.body.user.id;
+
+    await request(app)
+      .delete(`/users/user/${userId}`)
+      .set('Authorization', 'Bearer YOUR_VALID_TOKEN') // Thay thế bằng token hợp lệ
+      .expect(200);
+
+    const response = await request(app)
+      .get(`/users/${userId}`)
+      .set('Authorization', 'Bearer YOUR_VALID_TOKEN') // Thay thế bằng token hợp lệ
+      .expect(404);
+
+    expect(response.body.error).toBe('User not found');
+  });
+
+  test('POST /users/me/changepassword/:id should change user password', async () => {
+    const userResponse = await request(app)
+      .post('/users')
+      .set('Authorization', 'Bearer YOUR_VALID_TOKEN') // Thay thế bằng token hợp lệ
+      .send({
+        username: 'testuser',
+        email: 'test@example.com',
+        password: 'password123',
+        bio: 'This is a bio'
+      });
+
+    const userId = userResponse.body.user.id;
+
+    const response = await request(app)
+      .post(`/users/me/changepassword/${userId}`)
+      .set('Authorization', 'Bearer YOUR_VALID_TOKEN') // Thay thế bằng token hợp lệ
+      .send({
+        oldPassword: 'password123',
+        newPassword: 'newpassword456'
+      })
+      .expect(200);
+
+    expect(response.body).toHaveProperty('message', 'Password changed successfully');
+  });
 });

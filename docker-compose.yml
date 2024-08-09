@@ -1,0 +1,12 @@
+  version: '3.8'
+
+  services:
+    sequelize_postgresql:
+      image: trantu30950/sequelize_postgresql:latest
+      build: .
+      container_name: sequelize_postgresql
+      restart: always
+      ports:
+        - '3001:3001'
+      volumes:
+        - ./.env:/app/.env

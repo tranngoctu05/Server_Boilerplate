@@ -6,14 +6,12 @@ const routes = require('./routes');
 require('dotenv').config();
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
-
+const config = require('./config/index')[process.env.NODE_ENV || 'development'];
 const TodoService = require('./services/TodoService');
 const UserService = require('./services/UserService');
 const AuthService = require('./services/AuthService');
-
+const log = config.log();
 module.exports = (config, sequelize) => {
-  const log = config.log();
-
   app.use(express.urlencoded({ extended: true }));
   app.use(express.json());
 

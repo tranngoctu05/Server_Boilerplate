@@ -3,26 +3,23 @@
 const http = require('http');
 const Sequelize = require('sequelize');
 
-const config = require('../config')[process.env.NODE_ENV || 'development'];
+const config = require('../config/index')[process.env.NODE_ENV || 'development'];
 
 const log = config.log();
 
-// Khởi tạo sequelize
 const sequelize = new Sequelize(config.postgres.options);
 
-// Khởi tạo ứng dụng
 const app = require('../app')(config, sequelize);
-
-// Kết nối tới cơ sở dữ liệu
 function connectToPostgres() {
-  return sequelize
+  return sequelize 
     .authenticate()
     .then(() => {
       log.info('Connection has been established successfully.');
-      return sequelize; // Đảm bảo sequelize được trả về
+      return sequelize;
     })
     .catch((error) => {
       log.error('Unable to connect to the database:', error);
+      console.error('Error details:', error);
       process.exit(1);
     });
 }
@@ -39,3 +36,4 @@ connectToPostgres().then((postgresClient) => {
     );
   });
 });
+module.exports = sequelize;

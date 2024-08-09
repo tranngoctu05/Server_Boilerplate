@@ -1,29 +1,24 @@
 const bunyan = require('bunyan');
-// Load package.json
+require('dotenv').config();
 const pjs = require('../package.json');
-
-// Get some meta info from the package.json
 const { name, version } = pjs;
 
-// Set up a logger
 const getLogger = (serviceName, serviceVersion, level) =>
   bunyan.createLogger({ name: `${serviceName}:${serviceVersion}`, level });
 
-// Configuration options for different environments
 module.exports = {
   development: {
     name,
     version,
-    serviceTimeout: 30,
+    serviceTimeout: process.env.SERVICE_TIMEOUT,
     postgres: {
       options: {
-        host: '203.145.47.122',
-        port: 6000,
-        database: 'dev',
+        host: process.env.DB_HOST,
+        port: process.env.DB_PORT,
+        database: process.env.DB_DATABASE_DEV,
         dialect: 'postgres',
-        username: 'postgres',
-        password: 'tudev',
-        // eslint-disable-next-line no-undef
+        username: process.env.DB_USERNAME,
+        password: process.env.DB_PASSWORD,
         logging: (msg) => getLogger(name, version, 'debug').info(msg),
       },
       client: null,
@@ -33,13 +28,37 @@ module.exports = {
   production: {
     name,
     version,
-    serviceTimeout: 30,
+    serviceTimeout: process.env.SERVICE_TIMEOUT,
+    postgres: {
+      options: {
+        host: process.env.DB_HOST,
+        port: process.env.DB_PORT,
+        database: process.env.DB_DATABASE_PROD,
+        dialect: 'postgres',
+        username: process.env.DB_USERNAME,
+        password: process.env.DB_PASSWORD,
+        logging: (msg) => getLogger(name, version, 'info').info(msg),
+      },
+      client: null,
+    },
     log: () => getLogger(name, version, 'info'),
   },
   test: {
     name,
     version,
-    serviceTimeout: 30,
+    serviceTimeout: process.env.SERVICE_TIMEOUT,
+    postgres: {
+      options: {
+        host: process.env.DB_HOST,
+        port: process.env.DB_PORT,
+        database: process.env.DB_DATABASE_TEST,
+        dialect: 'postgres',
+        username: process.env.DB_USERNAME,
+        password: process.env.DB_PASSWORD,
+        logging: (msg) => getLogger(name, version, 'fatal').info(msg),
+      },
+      client: null,
+    },
     log: () => getLogger(name, version, 'fatal'),
   },
 };
