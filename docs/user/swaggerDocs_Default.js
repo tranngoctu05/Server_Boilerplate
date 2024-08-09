@@ -7,7 +7,7 @@
 /**
 /**
  * @swagger
- * /:
+ * /api/:
  *   get:
  *     summary: Home Page
  *     description: Welcome to the home page of the API.
