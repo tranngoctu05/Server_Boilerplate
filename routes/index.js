@@ -4,6 +4,7 @@ const router = express.Router();
 const todosRoute = require('./todos');
 const usersRoute = require('./users');
 const authRoute = require('./auth');
+const postRouter = require('./post');
 
 module.exports = (params) => {
 
@@ -14,6 +15,7 @@ module.exports = (params) => {
   router.use('/todo', todosRoute(params.todoService));
   router.use('/user', usersRoute(params.userService));
   router.use('/auth', authRoute(params.authService));
+  router.use('/post', postRouter(params.postService));
 
   return router;
 };

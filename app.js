@@ -10,6 +10,7 @@ const config = require('./config/index')[process.env.NODE_ENV || 'development'];
 const TodoService = require('./services/TodoService');
 const UserService = require('./services/UserService');
 const AuthService = require('./services/AuthService');
+const PostService = require('./services/PostService');
 const log = config.log();
 module.exports = (config, sequelize) => {
   app.use(express.urlencoded({ extended: true }));
@@ -18,6 +19,7 @@ module.exports = (config, sequelize) => {
   const todoService = new TodoService(sequelize);
   const userService = new UserService(sequelize);
   const authService = new AuthService(sequelize);
+  const postService = new PostService(sequelize);
 
   // Add a request logging middleware in development mode
   if (app.get('env') === 'development') {
@@ -27,7 +29,7 @@ module.exports = (config, sequelize) => {
     });
   }
 
-  app.use('/api', routes({ todoService, userService ,authService}));
+  app.use('/api', routes({ todoService, userService, authService,postService }));
   app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
   app.use(helmet());
   // eslint-disable-next-line no-unused-vars

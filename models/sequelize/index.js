@@ -34,5 +34,38 @@ module.exports = (sequelize) => {
             }
         }
     });
-    sequelize.sync({ alter: true });
+
+    const Post = sequelize.define('Post', {
+        id: {
+            type: DataTypes.UUID,
+            defaultValue: DataTypes.UUIDV4,
+            primaryKey: true,
+        },
+        title: {
+            type: DataTypes.STRING,
+            allowNull: false,
+        },
+        content: {
+            type: DataTypes.TEXT,
+            allowNull: false,
+        },
+        userId: {
+            type: DataTypes.UUID,
+            allowNull: false,
+            references: {
+                model: 'users',
+                key: 'id',
+            },
+            onUpdate: 'CASCADE',
+            onDelete: 'CASCADE',
+        },
+    }, {
+        tableName: 'posts',
+        timestamps: true,
+    });
+
+    // Thiết lập mối quan hệ
+    User.hasMany(Post, { foreignKey: 'userId', as: 'posts' });
+    Post.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+    sequelize.sync({ focus: true });
 }
