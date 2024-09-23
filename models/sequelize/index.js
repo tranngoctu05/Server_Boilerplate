@@ -1,5 +1,6 @@
 const { DataTypes } = require('sequelize');
 const bcrypt = require('bcrypt');
+
 module.exports = (sequelize) => {
     const User = sequelize.define('User', {
         id: {
@@ -7,65 +8,71 @@ module.exports = (sequelize) => {
             defaultValue: DataTypes.UUIDV4,
             primaryKey: true,
         },
-        username: {
-            type: DataTypes.STRING,
-            allowNull: true
+        createdAt: {
+            type: DataTypes.DATE,
+            allowNull: false,
+            defaultValue: DataTypes.NOW,
         },
-        email: {
+        updatedAt: {
+            type: DataTypes.DATE,
+            allowNull: false,
+            defaultValue: DataTypes.NOW,
+        },
+        deletedAt: {
+            type: DataTypes.DATE,
+            allowNull: true,
+        },
+        address: {
+            type: DataTypes.STRING,
+            allowNull: true,
+        },
+        pwdHash: {
             type: DataTypes.STRING,
             allowNull: false,
-            unique: true,
         },
-        password: {
+        fullname: {
             type: DataTypes.STRING,
-            allowNull: false,
+            allowNull: true,
         },
-        bio: {
-            type: DataTypes.STRING,
-            allowNull: true
-        }
+        points: {
+            type: DataTypes.INTEGER,
+            defaultValue: 0,
+        },
+        rankPoints: {
+            type: DataTypes.INTEGER,
+            defaultValue: 0,
+        },
+        distance: {
+            type: DataTypes.NUMERIC,
+            defaultValue: 0,
+        },
+        totalTime: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+        },
+        totalLocations: {
+            type: DataTypes.INTEGER,
+            defaultValue: 0,
+        },
+        invitedFriends: {
+            type: DataTypes.INTEGER,
+            defaultValue: 0,
+        },
     }, {
         tableName: 'users',
-        timestamps: true,
+        timestamps: false, // vì bạn sẽ quản lý timestamps riêng
         hooks: {
             beforeCreate: async (user) => {
                 const salt = await bcrypt.genSalt(10);
-                user.password = await bcrypt.hash(user.password, salt);
-            }
-        }
-    });
-
-    const Post = sequelize.define('Post', {
-        id: {
-            type: DataTypes.UUID,
-            defaultValue: DataTypes.UUIDV4,
-            primaryKey: true,
-        },
-        title: {
-            type: DataTypes.STRING,
-            allowNull: false,
-        },
-        content: {
-            type: DataTypes.TEXT,
-            allowNull: false,
-        },
-        userId: {
-            type: DataTypes.UUID,
-            allowNull: false,
-            references: {
-                model: 'users',
-                key: 'id',
+                user.pwdHash = await bcrypt.hash(user.pwdHash, salt);
+                user.createdAt = new Date();
+                user.updatedAt = new Date();
             },
-            onUpdate: 'CASCADE',
-            onDelete: 'CASCADE',
+            beforeUpdate: (user) => {
+                user.updatedAt = new Date();
+            },
         },
-    }, {
-        tableName: 'posts',
-        timestamps: true,
     });
 
-    // Thiết lập mối quan hệ
-    User.hasMany(Post, { foreignKey: 'userId', as: 'posts' });
-    Post.belongsTo(User, { foreignKey: 'userId', as: 'user' });
-    sequelize.sync({ focus: true });
+    sequelize.sync({ force: false });
 }
